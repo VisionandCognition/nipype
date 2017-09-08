@@ -1257,17 +1257,18 @@ class MapNode(Node):
         """
         for iterfield in self.iterfield:
             if not isdefined(getattr(self.inputs, iterfield)):
-                raise ValueError(("Input %s was not set but it is listed "
-                                  "in iterfields.") % iterfield)
+                raise ValueError(("Input %s of MapNode %s was not set but it "
+                                  "is listed in iterfields.") %
+                                 (iterfield, self.name))
         if len(self.iterfield) > 1:
             first_len = len(filename_to_list(getattr(self.inputs,
                                                      self.iterfield[0])))
             for iterfield in self.iterfield[1:]:
                 if first_len != len(filename_to_list(getattr(self.inputs,
                                                              iterfield))):
-                    raise ValueError(("All iterfields of a MapNode have to "
+                    raise ValueError(("All iterfields of MapNode %s have to "
                                       "have the same length. %s") %
-                                     str(self.inputs))
+                                     (self.name, str(self.inputs)))
 
     def _run_interface(self, execute=True, updatehash=False):
         """Run the mapnode interface
