@@ -11,7 +11,8 @@ def test_gtractConcatDwi_inputs():
     ),
     ignoreOrigins=dict(argstr='--ignoreOrigins ',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputVolume=dict(argstr='--inputVolume %s...',
@@ -21,7 +22,8 @@ def test_gtractConcatDwi_inputs():
     outputVolume=dict(argstr='--outputVolume %s',
     hash_files=False,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = gtractConcatDwi.input_spec()

@@ -13,7 +13,8 @@ def test_DT2NIfTI_inputs():
     mandatory=True,
     position=3,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='-inputfile %s',
@@ -24,7 +25,8 @@ def test_DT2NIfTI_inputs():
     genfile=True,
     position=2,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = DT2NIfTI.input_spec()

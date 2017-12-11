@@ -21,7 +21,8 @@ def test_FilterTracks_inputs():
     units='mm',
     xor=['exclude_file', 'exclude_spec'],
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='%s',
@@ -53,7 +54,8 @@ def test_FilterTracks_inputs():
     quiet=dict(argstr='-quiet',
     position=1,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = FilterTracks.input_spec()

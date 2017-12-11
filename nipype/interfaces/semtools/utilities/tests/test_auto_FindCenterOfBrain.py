@@ -39,7 +39,8 @@ def test_FindCenterOfBrain_inputs():
     ),
     headSizeLimit=dict(argstr='--headSizeLimit %f',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     imageMask=dict(argstr='--imageMask %s',
@@ -50,7 +51,8 @@ def test_FindCenterOfBrain_inputs():
     ),
     otsuPercentileThreshold=dict(argstr='--otsuPercentileThreshold %f',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = FindCenterOfBrain.input_spec()

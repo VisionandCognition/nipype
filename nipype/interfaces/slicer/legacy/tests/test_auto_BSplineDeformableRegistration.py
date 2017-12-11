@@ -23,7 +23,8 @@ def test_BSplineDeformableRegistration_inputs():
     ),
     histogrambins=dict(argstr='--histogrambins %d',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     initialtransform=dict(argstr='--initialtransform %s',
@@ -43,7 +44,8 @@ def test_BSplineDeformableRegistration_inputs():
     ),
     spatialsamples=dict(argstr='--spatialsamples %d',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = BSplineDeformableRegistration.input_spec()

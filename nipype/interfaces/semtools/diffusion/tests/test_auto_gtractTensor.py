@@ -18,7 +18,8 @@ def test_gtractTensor_inputs():
     ignoreIndex=dict(argstr='--ignoreIndex %s',
     sep=',',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputVolume=dict(argstr='--inputVolume %s',
@@ -39,7 +40,8 @@ def test_gtractTensor_inputs():
     ),
     size=dict(argstr='--size %f',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = gtractTensor.input_spec()

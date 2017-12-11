@@ -11,7 +11,8 @@ def test_DWIUnbiasedNonLocalMeansFilter_inputs():
     ),
     hp=dict(argstr='--hp %f',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputVolume=dict(argstr='%s',
@@ -32,7 +33,8 @@ def test_DWIUnbiasedNonLocalMeansFilter_inputs():
     rs=dict(argstr='--rs %s',
     sep=',',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = DWIUnbiasedNonLocalMeansFilter.input_spec()

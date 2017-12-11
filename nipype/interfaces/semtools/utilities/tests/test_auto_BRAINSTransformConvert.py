@@ -12,7 +12,8 @@ def test_BRAINSTransformConvert_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputTransform=dict(argstr='--inputTransform %s',
@@ -26,7 +27,8 @@ def test_BRAINSTransformConvert_inputs():
     ),
     referenceVolume=dict(argstr='--referenceVolume %s',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = BRAINSTransformConvert.input_spec()

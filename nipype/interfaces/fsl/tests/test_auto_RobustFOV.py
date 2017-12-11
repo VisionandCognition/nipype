@@ -11,7 +11,8 @@ def test_RobustFOV_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='-i %s',
@@ -29,7 +30,8 @@ def test_RobustFOV_inputs():
     name_template='%s_to_ROI',
     ),
     output_type=dict(),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = RobustFOV.input_spec()

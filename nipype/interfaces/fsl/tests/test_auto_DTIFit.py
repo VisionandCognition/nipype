@@ -29,7 +29,8 @@ def test_DTIFit_inputs():
     ),
     gradnonlin=dict(argstr='--gradnonlin=%s',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     little_bit=dict(argstr='--littlebit',
@@ -55,7 +56,8 @@ def test_DTIFit_inputs():
     ),
     sse=dict(argstr='--sse',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = DTIFit.input_spec()

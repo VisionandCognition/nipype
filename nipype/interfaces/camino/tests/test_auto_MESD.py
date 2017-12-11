@@ -14,7 +14,8 @@ def test_MESD_inputs():
     fastmesd=dict(argstr='-fastmesd',
     requires=['mepointset'],
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='-inputfile %s',
@@ -42,7 +43,8 @@ def test_MESD_inputs():
     scheme_file=dict(argstr='-schemefile %s',
     mandatory=True,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = MESD.input_spec()

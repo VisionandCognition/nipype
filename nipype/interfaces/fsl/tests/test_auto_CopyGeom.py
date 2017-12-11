@@ -20,7 +20,8 @@ def test_CopyGeom_inputs():
     ignore_dims=dict(argstr='-d',
     position='-1',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='%s',
@@ -28,7 +29,8 @@ def test_CopyGeom_inputs():
     position=0,
     ),
     output_type=dict(),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = CopyGeom.input_spec()

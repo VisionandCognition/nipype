@@ -9,7 +9,8 @@ def test_GenerateLabelMapFromProbabilityMap_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputVolumes=dict(argstr='--inputVolumes %s...',
@@ -19,7 +20,8 @@ def test_GenerateLabelMapFromProbabilityMap_inputs():
     outputLabelVolume=dict(argstr='--outputLabelVolume %s',
     hash_files=False,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = GenerateLabelMapFromProbabilityMap.input_spec()

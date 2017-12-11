@@ -12,7 +12,8 @@ def test_QBallMX_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     order=dict(argstr='-order %d',
@@ -34,7 +35,8 @@ def test_QBallMX_inputs():
     smoothingsigma=dict(argstr='-smoothingsigma %f',
     units='NA',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = QBallMX.input_spec()

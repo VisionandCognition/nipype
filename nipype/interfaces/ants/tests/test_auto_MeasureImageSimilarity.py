@@ -16,7 +16,8 @@ def test_MeasureImageSimilarity_inputs():
     ),
     fixed_image_mask=dict(argstr='%s',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     metric=dict(argstr='%s',
@@ -41,7 +42,8 @@ def test_MeasureImageSimilarity_inputs():
     sampling_strategy=dict(requires=['metric'],
     usedefault=True,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = MeasureImageSimilarity.input_spec()

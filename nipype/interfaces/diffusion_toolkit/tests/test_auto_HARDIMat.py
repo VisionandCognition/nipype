@@ -15,7 +15,8 @@ def test_HARDIMat_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     image_info=dict(argstr='-info %s',
@@ -34,7 +35,8 @@ def test_HARDIMat_inputs():
     ),
     reference_file=dict(argstr='-ref %s',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = HARDIMat.input_spec()

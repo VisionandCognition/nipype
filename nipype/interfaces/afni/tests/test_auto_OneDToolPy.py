@@ -17,7 +17,8 @@ def test_OneDToolPy_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='-infile %s',
@@ -44,7 +45,8 @@ def test_OneDToolPy_inputs():
     ),
     show_trs_uncensored=dict(argstr='-show_trs_uncensored %s',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = OneDToolPy.input_spec()

@@ -11,7 +11,8 @@ def test_Hist_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='-input %s',
@@ -41,7 +42,8 @@ def test_Hist_inputs():
     showhist=dict(argstr='-showhist',
     usedefault=True,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = Hist.input_spec()

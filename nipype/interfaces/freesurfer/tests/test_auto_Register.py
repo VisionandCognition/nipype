@@ -12,7 +12,8 @@ def test_Register_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_smoothwm=dict(copyfile=True,
@@ -34,7 +35,8 @@ def test_Register_inputs():
     mandatory=True,
     position=-2,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = Register.input_spec()

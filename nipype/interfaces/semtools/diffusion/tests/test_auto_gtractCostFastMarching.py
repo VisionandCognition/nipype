@@ -11,7 +11,8 @@ def test_gtractCostFastMarching_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputAnisotropyVolume=dict(argstr='--inputAnisotropyVolume %s',
@@ -34,7 +35,8 @@ def test_gtractCostFastMarching_inputs():
     ),
     stoppingValue=dict(argstr='--stoppingValue %f',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = gtractCostFastMarching.input_spec()

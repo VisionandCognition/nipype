@@ -9,7 +9,8 @@ def test_UnaryMaths_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='%s',
@@ -28,7 +29,8 @@ def test_UnaryMaths_inputs():
     output_datatype=dict(argstr='-odt %s',
     position=-3,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = UnaryMaths.input_spec()

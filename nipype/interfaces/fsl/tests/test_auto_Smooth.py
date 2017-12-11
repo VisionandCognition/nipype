@@ -14,7 +14,8 @@ def test_Smooth_inputs():
     position=1,
     xor=['sigma'],
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='%s',
@@ -33,7 +34,8 @@ def test_Smooth_inputs():
     name_template='%s_smooth',
     position=2,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = Smooth.input_spec()

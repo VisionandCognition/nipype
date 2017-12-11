@@ -15,7 +15,8 @@ def test_UnpackSDICOMDir_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     log_file=dict(argstr='-log %s',
@@ -42,7 +43,8 @@ def test_UnpackSDICOMDir_inputs():
     spm_zeropad=dict(argstr='-nspmzeropad %d',
     ),
     subjects_dir=dict(),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = UnpackSDICOMDir.input_spec()

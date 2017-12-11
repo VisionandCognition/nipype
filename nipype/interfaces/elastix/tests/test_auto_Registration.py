@@ -14,7 +14,8 @@ def test_Registration_inputs():
     ),
     fixed_mask=dict(argstr='-fMask %s',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     initial_transform=dict(argstr='-t0 %s',
@@ -34,7 +35,8 @@ def test_Registration_inputs():
     parameters=dict(argstr='-p %s...',
     mandatory=True,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = Registration.input_spec()

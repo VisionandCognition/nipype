@@ -13,7 +13,8 @@ def test_RobustStatisticsSegmenter_inputs():
     ),
     expectedVolume=dict(argstr='--expectedVolume %f',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     intensityHomogeneity=dict(argstr='--intensityHomogeneity %f',
@@ -32,7 +33,8 @@ def test_RobustStatisticsSegmenter_inputs():
     hash_files=False,
     position=-1,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = RobustStatisticsSegmenter.input_spec()

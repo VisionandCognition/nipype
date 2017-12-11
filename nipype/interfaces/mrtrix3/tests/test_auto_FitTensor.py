@@ -15,7 +15,8 @@ def test_FitTensor_inputs():
     ),
     grad_fsl=dict(argstr='-fslgrad %s %s',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_bval=dict(),
@@ -39,7 +40,8 @@ def test_FitTensor_inputs():
     ),
     reg_term=dict(argstr='-regularisation %f',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = FitTensor.input_spec()

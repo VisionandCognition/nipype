@@ -11,7 +11,8 @@ def test_AvScale_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     mat_file=dict(argstr='%s',
@@ -20,7 +21,8 @@ def test_AvScale_inputs():
     ref_file=dict(argstr='%s',
     position=-1,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = AvScale.input_spec()

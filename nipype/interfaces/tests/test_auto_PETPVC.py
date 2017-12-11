@@ -23,7 +23,8 @@ def test_PETPVC_inputs():
     fwhm_z=dict(argstr='-z %.4f',
     mandatory=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     in_file=dict(argstr='-i %s',
@@ -45,7 +46,8 @@ def test_PETPVC_inputs():
     ),
     stop_crit=dict(argstr='-a %.4f',
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = PETPVC.input_spec()

@@ -9,7 +9,8 @@ def test_BRAINSLmkTransform_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     inputFixedLandmarks=dict(argstr='--inputFixedLandmarks %s',
@@ -28,7 +29,8 @@ def test_BRAINSLmkTransform_inputs():
     outputResampledVolume=dict(argstr='--outputResampledVolume %s',
     hash_files=False,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = BRAINSLmkTransform.input_spec()

@@ -15,7 +15,8 @@ from builtins import open
 import os
 import os.path as op
 
-from ...utils.filemanip import (load_json, save_json, split_filename)
+from ...utils.filemanip import (load_json, save_json, split_filename,
+                                fname_presuffix)
 from ..base import (
     CommandLineInputSpec, CommandLine, TraitedSpec,
     traits, isdefined, File, InputMultiPath, Undefined, Str)
@@ -119,7 +120,7 @@ class AlignEpiAnatPyOutputSpec(TraitedSpec):
         desc="matrix to volume register and align epi"
              "to anatomy and put into standard space")
     epi_vr_motion = File(
-        desc="motion parameters from EPI time-series" 
+        desc="motion parameters from EPI time-series"
              "registration (tsh included in name if slice"
              "timing correction is also included).")
     skullstrip = File(
@@ -131,20 +132,20 @@ class AlignEpiAnatPy(AFNIPythonCommand):
     an EPI and an anatomical structural dataset, and applies the resulting
     transformation to one or the other to bring them into alignment.
 
-    This script computes the transforms needed to align EPI and  
-    anatomical datasets using a cost function designed for this purpose. The  
-    script combines multiple transformations, thereby minimizing the amount of 
+    This script computes the transforms needed to align EPI and
+    anatomical datasets using a cost function designed for this purpose. The
+    script combines multiple transformations, thereby minimizing the amount of
     interpolation applied to the data.
-    
+
     Basic Usage:
       align_epi_anat.py -anat anat+orig -epi epi+orig -epi_base 5
-    
+
     The user must provide EPI and anatomical datasets and specify the EPI
-    sub-brick to use as a base in the alignment.  
+    sub-brick to use as a base in the alignment.
 
     Internally, the script always aligns the anatomical to the EPI dataset,
-    and the resulting transformation is saved to a 1D file. 
-    As a user option, the inverse of this transformation may be applied to the 
+    and the resulting transformation is saved to a 1D file.
+    As a user option, the inverse of this transformation may be applied to the
     EPI dataset in order to align it to the anatomical data instead.
 
     This program generates several kinds of output in the form of datasets
@@ -168,7 +169,7 @@ class AlignEpiAnatPy(AFNIPythonCommand):
     >>> al_ea.inputs.volreg = 'off'
     >>> al_ea.inputs.tshift = 'off'
     >>> al_ea.inputs.save_skullstrip = True
-    >>> al_ea.cmdline # doctest: +ALLOW_UNICODE +ELLIPSIS
+    >>> al_ea.cmdline # doctest: +ELLIPSIS
     'python2 ...align_epi_anat.py -anat structural.nii -epi_base 0 -epi_strip 3dAutomask -epi functional.nii -save_skullstrip -suffix _al -tshift off -volreg off'
     >>> res = allineate.run()  # doctest: +SKIP
     """
@@ -182,7 +183,7 @@ class AlignEpiAnatPy(AFNIPythonCommand):
         epi_prefix = ''.join(self._gen_fname(self.inputs.in_file).split('+')[:-1])
         outputtype = self.inputs.outputtype
         if outputtype == 'AFNI':
-            ext = '.HEAD' 
+            ext = '.HEAD'
         else:
             Info.output_type_to_ext(outputtype)
         matext = '.1D'
@@ -220,32 +221,37 @@ class AllineateInputSpec(AFNICommandInputSpec):
     out_file = File(
         desc='output file from 3dAllineate',
         argstr='-prefix %s',
-        name_source='in_file',
-        name_template='%s_allineate',
         genfile=True,
         xor=['allcostx'])
     out_param_file = File(
         argstr='-1Dparam_save %s',
-        desc='Save the warp parameters in ASCII (.1D) format.')
+        desc='Save the warp parameters in ASCII (.1D) format.',
+        xor=['in_param_file','allcostx'])
     in_param_file = File(
         exists=True,
         argstr='-1Dparam_apply %s',
         desc='Read warp parameters from file and apply them to '
-             'the source dataset, and produce a new dataset')
+             'the source dataset, and produce a new dataset',
+        xor=['out_param_file'])
     out_matrix = File(
         argstr='-1Dmatrix_save %s',
-        desc='Save the transformation matrix for each volume.')
+        desc='Save the transformation matrix for each volume.',
+        xor=['in_matrix','allcostx'])
     in_matrix = File(
         desc='matrix to align input file',
-        argstr='-1Dmatrix_apply %s')
-    # TODO: implement sensible xors for allcostx and suppres prefix in command when allcosx is used
+        argstr='-1Dmatrix_apply %s',
+        position=-3,
+        xor=['out_matrix'])
+    overwrite = traits.Bool(
+        desc='overwrite output file if it already exists',
+        argstr='-overwrite')
+
     allcostx= File(
         desc='Compute and print ALL available cost functionals for the un-warped inputs'
              'AND THEN QUIT. If you use this option none of the other expected outputs will be produced',
         argstr='-allcostx |& tee %s',
         position=-1,
-        xor=['out_file'])
-
+        xor=['out_file', 'out_matrix', 'out_param_file', 'out_weight_file'])
     _cost_funcs = [
         'leastsq', 'ls',
         'mutualinfo', 'mi',
@@ -308,7 +314,7 @@ class AllineateInputSpec(AFNICommandInputSpec):
         desc='Use a two pass alignment strategy for all volumes, searching '
              'for a large rotation+shift and then refining the alignment.')
     two_blur = traits.Float(
-        argstr='-twoblur',
+        argstr='-twoblur %f',
         desc='Set the blurring radius for the first pass in mm.')
     two_first = traits.Bool(
         argstr='-twofirst',
@@ -351,12 +357,21 @@ class AllineateInputSpec(AFNICommandInputSpec):
     weight_file = File(
         argstr='-weight %s',
         exists=True,
+        deprecated='1.0.0', new_name='weight',
         desc='Set the weighting for each voxel in the base dataset; '
              'larger weights mean that voxel count more in the cost function. '
              'Must be defined on the same grid as the base dataset')
+    weight = traits.Either(
+        File(exists=True), traits.Float(),
+        argstr='-weight %s',
+        desc='Set the weighting for each voxel in the base dataset; '
+             'larger weights mean that voxel count more in the cost function. '
+             'If an image file is given, the volume must be defined on the '
+             'same grid as the base dataset')
     out_weight_file = traits.File(
         argstr='-wtprefix %s',
-        desc='Write the weight volume to disk as a dataset')
+        desc='Write the weight volume to disk as a dataset',
+        xor=['allcostx'])
     source_mask = File(
         exists=True,
         argstr='-source_mask %s',
@@ -386,6 +401,18 @@ class AllineateInputSpec(AFNICommandInputSpec):
              'EPI slices, and the base as comprising anatomically '
              '\'true\' images.  Only phase-encoding direction image '
              'shearing and scaling will be allowed with this option.')
+    maxrot = traits.Float(
+        argstr='-maxrot %f',
+        desc='Maximum allowed rotation in degrees.')
+    maxshf = traits.Float(
+        argstr='-maxshf %f',
+        desc='Maximum allowed shift in mm.')
+    maxscl = traits.Float(
+        argstr='-maxscl %f',
+        desc='Maximum allowed scaling factor.')
+    maxshr = traits.Float(
+        argstr='-maxshr %f',
+        desc='Maximum allowed shearing factor.')
     master = File(
         exists=True,
         argstr='-master %s',
@@ -414,8 +441,10 @@ class AllineateInputSpec(AFNICommandInputSpec):
 
 
 class AllineateOutputSpec(TraitedSpec):
-    out_file = File(desc='output image file name')
-    matrix = File(desc='matrix to align input file')
+    out_file = File(exists=True, desc='output image file name')
+    out_matrix = File(exists=True, desc='matrix to align input file')
+    out_param_file = File(exists=True, desc='warp parameters')
+    out_weight_file = File(exists=True, desc='weight volume')
     allcostx = File(desc='Compute and print ALL available cost functionals for the un-warped inputs')
 
 
@@ -433,8 +462,8 @@ class Allineate(AFNICommand):
     >>> allineate.inputs.in_file = 'functional.nii'
     >>> allineate.inputs.out_file = 'functional_allineate.nii'
     >>> allineate.inputs.in_matrix = 'cmatrix.mat'
-    >>> allineate.cmdline  # doctest: +ALLOW_UNICODE
-    '3dAllineate -source functional.nii -1Dmatrix_apply cmatrix.mat -prefix functional_allineate.nii'
+    >>> allineate.cmdline
+    '3dAllineate -source functional.nii -prefix functional_allineate.nii -1Dmatrix_apply cmatrix.mat'
     >>> res = allineate.run()  # doctest: +SKIP
 
     >>> from nipype.interfaces import afni
@@ -442,8 +471,8 @@ class Allineate(AFNICommand):
     >>> allineate.inputs.in_file = 'functional.nii'
     >>> allineate.inputs.reference = 'structural.nii'
     >>> allineate.inputs.allcostx = 'out.allcostX.txt'
-    >>> allineate.cmdline  # doctest: +ALLOW_UNICODE
-    '3dAllineate -source functional.nii -prefix functional_allineate -base structural.nii -allcostx |& tee out.allcostX.txt'
+    >>> allineate.cmdline
+    '3dAllineate -source functional.nii -base structural.nii -allcostx |& tee out.allcostX.txt'
     >>> res = allineate.run()  # doctest: +SKIP
     """
 
@@ -459,24 +488,38 @@ class Allineate(AFNICommand):
 
     def _list_outputs(self):
         outputs = self.output_spec().get()
-        if not isdefined(self.inputs.out_file):
-            outputs['out_file'] = self._gen_filename(self.inputs.in_file,
-                                                     suffix=self.inputs.suffix)
-        else:
-            outputs['out_file'] = os.path.abspath(self.inputs.out_file)
 
-        if isdefined(self.inputs.out_matrix):
-            outputs['matrix'] = os.path.abspath(os.path.join(os.getcwd(),\
-                                         self.inputs.out_matrix +'.aff12.1D'))
+        if self.inputs.out_file:
+            outputs['out_file'] = op.abspath(self.inputs.out_file)
 
-        if isdefined(self.inputs.allcostX):
-            outputs['allcostX'] = os.path.abspath(os.path.join(os.getcwd(),\
+        if self.inputs.out_weight_file:
+            outputs['out_weight_file'] = op.abspath(self.inputs.out_weight_file)
+
+        if self.inputs.out_matrix:
+            path, base, ext = split_filename(self.inputs.out_matrix)
+            if ext.lower() not in ['.1d', '.1D']:
+                outputs['out_matrix'] = self._gen_fname(self.inputs.out_matrix,
+                                                        suffix='.aff12.1D')
+            else:
+                outputs['out_matrix'] = op.abspath(self.inputs.out_matrix)
+
+        if self.inputs.out_param_file:
+            path, base, ext = split_filename(self.inputs.out_param_file)
+            if ext.lower() not in ['.1d', '.1D']:
+                outputs['out_param_file'] = self._gen_fname(self.inputs.out_param_file,
+                                                            suffix='.param.1D')
+            else:
+                outputs['out_param_file'] = op.abspath(self.inputs.out_param_file)
+
+        if isdefined(self.inputs.allcostx):
+            outputs['allcostX'] = os.path.abspath(os.path.join(os.getcwd(),
                                          self.inputs.allcostx))
         return outputs
 
     def _gen_filename(self, name):
         if name == 'out_file':
             return self._list_outputs()[name]
+        return None
 
 
 class AutoTcorrelateInputSpec(AFNICommandInputSpec):
@@ -531,10 +574,11 @@ class AutoTcorrelate(AFNICommand):
     >>> corr.inputs.eta2 = True
     >>> corr.inputs.mask = 'mask.nii'
     >>> corr.inputs.mask_only_targets = True
-    >>> corr.cmdline  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE +ALLOW_UNICODE
+    >>> corr.cmdline  # doctest: +ELLIPSIS
     '3dAutoTcorrelate -eta2 -mask mask.nii -mask_only_targets -prefix functional_similarity_matrix.1D -polort -1 functional.nii'
     >>> res = corr.run()  # doctest: +SKIP
     """
+
     input_spec = AutoTcorrelateInputSpec
     output_spec = AFNICommandOutputSpec
     _cmd = '3dAutoTcorrelate'
@@ -599,7 +643,7 @@ class Automask(AFNICommand):
     >>> automask.inputs.in_file = 'functional.nii'
     >>> automask.inputs.dilate = 1
     >>> automask.inputs.outputtype = 'NIFTI'
-    >>> automask.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
+    >>> automask.cmdline  # doctest: +ELLIPSIS
     '3dAutomask -apply_prefix functional_masked.nii -dilate 1 -prefix functional_mask.nii functional.nii'
     >>> res = automask.run()  # doctest: +SKIP
 
@@ -620,7 +664,7 @@ class AutoTLRCInputSpec(CommandLineInputSpec):
         mandatory=True,
         exists=True,
         copyfile=False)
-    base = traits.Str(  
+    base = traits.Str(
         desc = '              Reference anatomical volume'
                 '              Usually this volume is in some standard space like'
                 '              TLRC or MNI space and with afni dataset view of'
@@ -693,7 +737,7 @@ class AutoTLRC(AFNICommand):
     >>> autoTLRC.inputs.in_file = 'structural.nii'
     >>> autoTLRC.inputs.no_ss = True
     >>> autoTLRC.inputs.base = "TT_N27+tlrc"
-    >>> autoTLRC.cmdline # doctest: +ALLOW_UNICODE
+    >>> autoTLRC.cmdline
     '@auto_tlrc -base TT_N27+tlrc -input structural.nii -no_ss'
     >>> res = autoTLRC.run()  # doctest: +SKIP
 
@@ -706,7 +750,7 @@ class AutoTLRC(AFNICommand):
         ext = '.HEAD'
         outputs['out_file'] = os.path.abspath(self._gen_fname(self.inputs.in_file, suffix='+tlrc')+ext)
         return outputs
-    
+
 class BandpassInputSpec(AFNICommandInputSpec):
     in_file = File(
         desc='input file to 3dBandpass',
@@ -805,7 +849,7 @@ class Bandpass(AFNICommand):
     >>> bandpass.inputs.in_file = 'functional.nii'
     >>> bandpass.inputs.highpass = 0.005
     >>> bandpass.inputs.lowpass = 0.1
-    >>> bandpass.cmdline  # doctest: +ALLOW_UNICODE
+    >>> bandpass.cmdline
     '3dBandpass -prefix functional_bp 0.005000 0.100000 functional.nii'
     >>> res = bandpass.run()  # doctest: +SKIP
 
@@ -873,7 +917,7 @@ class BlurInMask(AFNICommand):
     >>> bim.inputs.in_file = 'functional.nii'
     >>> bim.inputs.mask = 'mask.nii'
     >>> bim.inputs.fwhm = 5.0
-    >>> bim.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
+    >>> bim.cmdline  # doctest: +ELLIPSIS
     '3dBlurInMask -input functional.nii -FWHM 5.000000 -mask mask.nii -prefix functional_blur'
     >>> res = bim.run()  # doctest: +SKIP
 
@@ -924,7 +968,7 @@ class BlurToFWHM(AFNICommand):
     >>> blur = afni.preprocess.BlurToFWHM()
     >>> blur.inputs.in_file = 'epi.nii'
     >>> blur.inputs.fwhm = 2.5
-    >>> blur.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
+    >>> blur.cmdline  # doctest: +ELLIPSIS
     '3dBlurToFWHM -FWHM 2.500000 -input epi.nii -prefix epi_afni'
     >>> res = blur.run()  # doctest: +SKIP
 
@@ -975,7 +1019,7 @@ class ClipLevel(AFNICommandBase):
     >>> from nipype.interfaces.afni import preprocess
     >>> cliplevel = preprocess.ClipLevel()
     >>> cliplevel.inputs.in_file = 'anatomical.nii'
-    >>> cliplevel.cmdline  # doctest: +ALLOW_UNICODE
+    >>> cliplevel.cmdline
     '3dClipLevel anatomical.nii'
     >>> res = cliplevel.run()  # doctest: +SKIP
 
@@ -1058,7 +1102,7 @@ class DegreeCentrality(AFNICommand):
     >>> degree.inputs.mask = 'mask.nii'
     >>> degree.inputs.sparsity = 1 # keep the top one percent of connections
     >>> degree.inputs.out_file = 'out.nii'
-    >>> degree.cmdline  # doctest: +ALLOW_UNICODE
+    >>> degree.cmdline
     '3dDegreeCentrality -mask mask.nii -prefix out.nii -sparsity 1.000000 functional.nii'
     >>> res = degree.run()  # doctest: +SKIP
 
@@ -1108,7 +1152,7 @@ class Despike(AFNICommand):
     >>> from nipype.interfaces import afni
     >>> despike = afni.Despike()
     >>> despike.inputs.in_file = 'functional.nii'
-    >>> despike.cmdline  # doctest: +ALLOW_UNICODE
+    >>> despike.cmdline
     '3dDespike -prefix functional_despike functional.nii'
     >>> res = despike.run()  # doctest: +SKIP
 
@@ -1149,7 +1193,7 @@ class Detrend(AFNICommand):
     >>> detrend.inputs.in_file = 'functional.nii'
     >>> detrend.inputs.args = '-polort 2'
     >>> detrend.inputs.outputtype = 'AFNI'
-    >>> detrend.cmdline  # doctest: +ALLOW_UNICODE
+    >>> detrend.cmdline
     '3dDetrend -polort 2 -prefix functional_detrend functional.nii'
     >>> res = detrend.run()  # doctest: +SKIP
 
@@ -1221,7 +1265,7 @@ class ECM(AFNICommand):
     >>> ecm.inputs.mask = 'mask.nii'
     >>> ecm.inputs.sparsity = 0.1 # keep top 0.1% of connections
     >>> ecm.inputs.out_file = 'out.nii'
-    >>> ecm.cmdline  # doctest: +ALLOW_UNICODE
+    >>> ecm.cmdline
     '3dECM -mask mask.nii -prefix out.nii -sparsity 0.100000 functional.nii'
     >>> res = ecm.run()  # doctest: +SKIP
 
@@ -1278,7 +1322,7 @@ class Fim(AFNICommand):
     >>> fim.inputs.out_file = 'functional_corr.nii'
     >>> fim.inputs.out = 'Correlation'
     >>> fim.inputs.fim_thr = 0.0009
-    >>> fim.cmdline  # doctest: +ALLOW_UNICODE
+    >>> fim.cmdline
     '3dfim+ -input functional.nii -ideal_file seed.1D -fim_thr 0.000900 -out Correlation -bucket functional_corr.nii'
     >>> res = fim.run()  # doctest: +SKIP
 
@@ -1332,7 +1376,7 @@ class Fourier(AFNICommand):
     >>> fourier.inputs.retrend = True
     >>> fourier.inputs.highpass = 0.005
     >>> fourier.inputs.lowpass = 0.1
-    >>> fourier.cmdline  # doctest: +ALLOW_UNICODE
+    >>> fourier.cmdline
     '3dFourier -highpass 0.005000 -lowpass 0.100000 -prefix functional_fourier -retrend functional.nii'
     >>> res = fourier.run()  # doctest: +SKIP
 
@@ -1405,7 +1449,7 @@ class Hist(AFNICommandBase):
     >>> from nipype.interfaces import afni
     >>> hist = afni.Hist()
     >>> hist.inputs.in_file = 'functional.nii'
-    >>> hist.cmdline  # doctest: +ALLOW_UNICODE
+    >>> hist.cmdline
     '3dHist -input functional.nii -prefix functional_hist'
     >>> res = hist.run()  # doctest: +SKIP
 
@@ -1422,7 +1466,7 @@ class Hist(AFNICommandBase):
             version = Info.version()
 
             # As of AFNI 16.0.00, redirect_x is not needed
-            if isinstance(version[0], int) and version[0] > 15:
+            if version[0] > 2015:
                 self._redirect_x = False
 
     def _parse_inputs(self, skip=None):
@@ -1469,7 +1513,7 @@ class LFCD(AFNICommand):
     >>> lfcd.inputs.mask = 'mask.nii'
     >>> lfcd.inputs.thresh = 0.8 # keep all connections with corr >= 0.8
     >>> lfcd.inputs.out_file = 'out.nii'
-    >>> lfcd.cmdline  # doctest: +ALLOW_UNICODE
+    >>> lfcd.cmdline
     '3dLFCD -mask mask.nii -prefix out.nii -thresh 0.800000 functional.nii'
     >>> res = lfcd.run()  # doctest: +SKIP
     """
@@ -1520,7 +1564,7 @@ class Maskave(AFNICommand):
     >>> maskave.inputs.in_file = 'functional.nii'
     >>> maskave.inputs.mask= 'seed_mask.nii'
     >>> maskave.inputs.quiet= True
-    >>> maskave.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
+    >>> maskave.cmdline  # doctest: +ELLIPSIS
     '3dmaskave -mask seed_mask.nii -quiet functional.nii > functional_maskave.1D'
     >>> res = maskave.run()  # doctest: +SKIP
 
@@ -1591,7 +1635,7 @@ class Means(AFNICommand):
     >>> means.inputs.in_file_a = 'im1.nii'
     >>> means.inputs.in_file_b = 'im2.nii'
     >>> means.inputs.out_file =  'output.nii'
-    >>> means.cmdline  # doctest: +ALLOW_UNICODE
+    >>> means.cmdline
     '3dMean -prefix output.nii im1.nii im2.nii'
     >>> res = means.run()  # doctest: +SKIP
 
@@ -1600,7 +1644,7 @@ class Means(AFNICommand):
     >>> means.inputs.in_file_a = 'im1.nii'
     >>> means.inputs.out_file =  'output.nii'
     >>> means.inputs.datum = 'short'
-    >>> means.cmdline  # doctest: +ALLOW_UNICODE
+    >>> means.cmdline
     '3dMean -datum short -prefix output.nii im1.nii'
     >>> res = means.run()  # doctest: +SKIP
 
@@ -1633,13 +1677,13 @@ class OutlierCountInputSpec(CommandLineInputSpec):
         False,
         usedefault=True,
         argstr='-autoclip',
-        xor=['in_file'],
+        xor=['mask'],
         desc='clip off small voxels')
     automask = traits.Bool(
         False,
         usedefault=True,
         argstr='-automask',
-        xor=['in_file'],
+        xor=['mask'],
         desc='clip off small voxels')
     fraction = traits.Bool(
         False,
@@ -1675,28 +1719,19 @@ class OutlierCountInputSpec(CommandLineInputSpec):
     out_file = File(
         name_template='%s_outliers',
         name_source=['in_file'],
-        argstr='> %s',
         keep_extension=False,
-        position=-1,
         desc='capture standard output')
 
 
 class OutlierCountOutputSpec(TraitedSpec):
-    out_outliers = File(
-        exists=True,
-        desc='output image file name')
-    out_file = File(
-        name_template='%s_tqual',
-        name_source=['in_file'],
-        argstr='> %s',
-        keep_extension=False,
-        position=-1,
-        desc='capture standard output')
+    out_outliers = File(exists=True,
+                        desc='output image file name')
+    out_file = File(desc='capture standard output')
 
 
 class OutlierCount(CommandLine):
-    """Calculates number of 'outliers' a 3D+time dataset, at each
-    time point, and writes the results to stdout.
+    """Calculates number of 'outliers' at each time point of a
+    a 3D+time dataset.
 
     For complete details, see the `3dToutcount Documentation
     <https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html>`_
@@ -1707,8 +1742,8 @@ class OutlierCount(CommandLine):
     >>> from nipype.interfaces import afni
     >>> toutcount = afni.OutlierCount()
     >>> toutcount.inputs.in_file = 'functional.nii'
-    >>> toutcount.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
-    '3dToutcount functional.nii > functional_outliers'
+    >>> toutcount.cmdline  # doctest: +ELLIPSIS
+    '3dToutcount functional.nii'
     >>> res = toutcount.run()  # doctest: +SKIP
 
     """
@@ -1716,20 +1751,34 @@ class OutlierCount(CommandLine):
     _cmd = '3dToutcount'
     input_spec = OutlierCountInputSpec
     output_spec = OutlierCountOutputSpec
+    _terminal_output = 'file_split'
 
     def _parse_inputs(self, skip=None):
         if skip is None:
             skip = []
 
+        # This is not strictly an input, but needs be
+        # set before run() is called.
+        if self.terminal_output == 'none':
+            self.terminal_output = 'file_split'
+
         if not self.inputs.save_outliers:
             skip += ['outliers_file']
         return super(OutlierCount, self)._parse_inputs(skip)
 
+    def _run_interface(self, runtime):
+        runtime = super(OutlierCount, self)._run_interface(runtime)
+
+        # Read from runtime.stdout or runtime.merged
+        with open(op.abspath(self.inputs.out_file), 'w') as outfh:
+            outfh.write(runtime.stdout or runtime.merged)
+        return runtime
+
     def _list_outputs(self):
         outputs = self.output_spec().get()
+        outputs['out_file'] = op.abspath(self.inputs.out_file)
         if self.inputs.save_outliers:
             outputs['out_outliers'] = op.abspath(self.inputs.outliers_file)
-        outputs['out_file'] = op.abspath(self.inputs.out_file)
         return outputs
 
 
@@ -1806,7 +1855,7 @@ class QualityIndex(CommandLine):
     >>> from nipype.interfaces import afni
     >>> tqual = afni.QualityIndex()
     >>> tqual.inputs.in_file = 'functional.nii'
-    >>> tqual.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
+    >>> tqual.cmdline  # doctest: +ELLIPSIS
     '3dTqual functional.nii > functional_tqual'
     >>> res = tqual.run()  # doctest: +SKIP
 
@@ -1837,13 +1886,10 @@ class ROIStatsInputSpec(CommandLineInputSpec):
         desc='execute quietly',
         argstr='-quiet',
         position=1)
-    terminal_output = traits.Enum(
-        'allatonce',
+    terminal_output = traits.Enum('allatonce', deprecated='1.0.0',
         desc='Control terminal output:`allatonce` - waits till command is '
              'finished to display output',
-        nohash=True,
-        mandatory=True,
-        usedefault=True)
+        nohash=True)
 
 
 class ROIStatsOutputSpec(TraitedSpec):
@@ -1866,12 +1912,13 @@ class ROIStats(AFNICommandBase):
     >>> roistats.inputs.in_file = 'functional.nii'
     >>> roistats.inputs.mask = 'skeleton_mask.nii.gz'
     >>> roistats.inputs.quiet = True
-    >>> roistats.cmdline  # doctest: +ALLOW_UNICODE
+    >>> roistats.cmdline
     '3dROIstats -quiet -mask skeleton_mask.nii.gz functional.nii'
     >>> res = roistats.run()  # doctest: +SKIP
 
     """
     _cmd = '3dROIstats'
+    _terminal_output = 'allatonce'
     input_spec = ROIStatsInputSpec
     output_spec = ROIStatsOutputSpec
 
@@ -1960,7 +2007,7 @@ class Retroicor(AFNICommand):
     >>> ret.inputs.card = 'mask.1D'
     >>> ret.inputs.resp = 'resp.1D'
     >>> ret.inputs.outputtype = 'NIFTI'
-    >>> ret.cmdline  # doctest: +ALLOW_UNICODE
+    >>> ret.cmdline
     '3dretroicor -prefix functional_retroicor.nii -resp resp.1D -card mask.1D functional.nii'
     >>> res = ret.run()  # doctest: +SKIP
 
@@ -2043,7 +2090,7 @@ class Seg(AFNICommandBase):
     >>> seg = preprocess.Seg()
     >>> seg.inputs.in_file = 'structural.nii'
     >>> seg.inputs.mask = 'AUTO'
-    >>> seg.cmdline  # doctest: +ALLOW_UNICODE
+    >>> seg.cmdline
     '3dSeg -mask AUTO -anat structural.nii'
     >>> res = seg.run()  # doctest: +SKIP
 
@@ -2099,7 +2146,7 @@ class SkullStrip(AFNICommand):
     >>> skullstrip = afni.SkullStrip()
     >>> skullstrip.inputs.in_file = 'functional.nii'
     >>> skullstrip.inputs.args = '-o_ply'
-    >>> skullstrip.cmdline  # doctest: +ALLOW_UNICODE
+    >>> skullstrip.cmdline
     '3dSkullStrip -input functional.nii -o_ply -prefix functional_skullstrip'
     >>> res = skullstrip.run()  # doctest: +SKIP
 
@@ -2111,11 +2158,12 @@ class SkullStrip(AFNICommand):
 
     def __init__(self, **inputs):
         super(SkullStrip, self).__init__(**inputs)
+
         if not no_afni():
             v = Info.version()
 
-            # As of AFNI 16.0.00, redirect_x is not needed
-            if isinstance(v[0], int) and v[0] > 15:
+            # Between AFNI 16.0.00 and 16.2.07, redirect_x is not needed
+            if v >= (2016, 0, 0) and v < (2016, 2, 7):
                 self._redirect_x = False
 
 
@@ -2177,7 +2225,7 @@ class TCorr1D(AFNICommand):
     >>> tcorr1D = afni.TCorr1D()
     >>> tcorr1D.inputs.xset= 'u_rc1s1_Template.nii'
     >>> tcorr1D.inputs.y_1d = 'seed.1D'
-    >>> tcorr1D.cmdline  # doctest: +ALLOW_UNICODE
+    >>> tcorr1D.cmdline
     '3dTcorr1D -prefix u_rc1s1_Template_correlation.nii.gz  u_rc1s1_Template.nii  seed.1D'
     >>> res = tcorr1D.run()  # doctest: +SKIP
 
@@ -2319,7 +2367,7 @@ class TCorrMap(AFNICommand):
     >>> tcm.inputs.in_file = 'functional.nii'
     >>> tcm.inputs.mask = 'mask.nii'
     >>> tcm.mean_file = 'functional_meancorr.nii'
-    >>> tcm.cmdline  # doctest: +ALLOW_UNICODE +SKIP
+    >>> tcm.cmdline # doctest: +SKIP
     '3dTcorrMap -input functional.nii -mask mask.nii -Mean functional_meancorr.nii'
     >>> res = tcm.run()  # doctest: +SKIP
 
@@ -2387,7 +2435,7 @@ class TCorrelate(AFNICommand):
     >>> tcorrelate.inputs.out_file = 'functional_tcorrelate.nii.gz'
     >>> tcorrelate.inputs.polort = -1
     >>> tcorrelate.inputs.pearson = True
-    >>> tcorrelate.cmdline  # doctest: +ALLOW_UNICODE
+    >>> tcorrelate.cmdline
     '3dTcorrelate -prefix functional_tcorrelate.nii.gz -pearson -polort -1 u_rc1s1_Template.nii u_rc1s2_Template.nii'
     >>> res = tcarrelate.run()  # doctest: +SKIP
 
@@ -2449,7 +2497,7 @@ class TNorm(AFNICommand):
     >>> tnorm.inputs.in_file = 'functional.nii'
     >>> tnorm.inputs.norm2 = True
     >>> tnorm.inputs.out_file = 'rm.errts.unit errts+tlrc'
-    >>> tnorm.cmdline  # doctest: +ALLOW_UNICODE
+    >>> tnorm.cmdline
     '3dTnorm -norm2 -prefix rm.errts.unit errts+tlrc functional.nii'
     >>> res = tshift.run()  # doctest: +SKIP
 
@@ -2519,7 +2567,7 @@ class TShift(AFNICommand):
     >>> tshift.inputs.in_file = 'functional.nii'
     >>> tshift.inputs.tpattern = 'alt+z'
     >>> tshift.inputs.tzero = 0.0
-    >>> tshift.cmdline  # doctest: +ALLOW_UNICODE
+    >>> tshift.cmdline
     '3dTshift -prefix functional_tshift -tpattern alt+z -tzero 0.0 functional.nii'
     >>> res = tshift.run()  # doctest: +SKIP
 
@@ -2620,7 +2668,7 @@ class Volreg(AFNICommand):
     >>> volreg.inputs.args = '-Fourier -twopass'
     >>> volreg.inputs.zpad = 4
     >>> volreg.inputs.outputtype = 'NIFTI'
-    >>> volreg.cmdline  # doctest: +ELLIPSIS +ALLOW_UNICODE
+    >>> volreg.cmdline  # doctest: +ELLIPSIS
     '3dvolreg -Fourier -twopass -1Dfile functional.1D -1Dmatrix_save functional.aff12.1D -prefix functional_volreg.nii -zpad 4 -maxdisp1D functional_md.1D functional.nii'
     >>> res = volreg.run()  # doctest: +SKIP
 
@@ -2634,7 +2682,7 @@ class Volreg(AFNICommand):
     >>> volreg.inputs.out_file = 'rm.epi.volreg.r1'
     >>> volreg.inputs.oned_file = 'dfile.r1.1D'
     >>> volreg.inputs.oned_matrix_save = 'mat.r1.tshift+orig.1D'
-    >>> volreg.cmdline # doctest: +ALLOW_UNICODE
+    >>> volreg.cmdline
     '3dvolreg -cubic -1Dfile dfile.r1.1D -1Dmatrix_save mat.r1.tshift+orig.1D -prefix rm.epi.volreg.r1 -verbose -base functional.nii -zpad 1 -maxdisp1D functional_md.1D functional.nii'
     >>> res = volreg.run()  # doctest: +SKIP
 
@@ -2668,6 +2716,11 @@ class WarpInputSpec(AFNICommandInputSpec):
         desc='apply transformation from 3dWarpDrive',
         argstr='-matparent %s',
         exists=True)
+    oblique_parent = File(
+        desc='Read in the oblique transformation matrix from an oblique '
+             'dataset and make cardinal dataset oblique to match',
+        argstr='-oblique_parent %s',
+        exists=True)
     deoblique = traits.Bool(
         desc='transform dataset from oblique to cardinal',
         argstr='-deoblique')
@@ -2685,6 +2738,9 @@ class WarpInputSpec(AFNICommandInputSpec):
     zpad = traits.Int(
         desc='pad input dataset with N planes of zero on all sides.',
         argstr='-zpad %d')
+    verbose = traits.Bool(
+        desc='Print out some information along the way.',
+        argstr='-verb')
 
 
 class Warp(AFNICommand):
@@ -2701,7 +2757,7 @@ class Warp(AFNICommand):
     >>> warp.inputs.in_file = 'structural.nii'
     >>> warp.inputs.deoblique = True
     >>> warp.inputs.out_file = 'trans.nii.gz'
-    >>> warp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> warp.cmdline
     '3dWarp -deoblique -prefix trans.nii.gz structural.nii'
     >>> res = warp.run()  # doctest: +SKIP
 
@@ -2709,7 +2765,7 @@ class Warp(AFNICommand):
     >>> warp_2.inputs.in_file = 'structural.nii'
     >>> warp_2.inputs.newgrid = 1.0
     >>> warp_2.inputs.out_file = 'trans.nii.gz'
-    >>> warp_2.cmdline  # doctest: +ALLOW_UNICODE
+    >>> warp_2.cmdline
     '3dWarp -newgrid 1.000000 -prefix trans.nii.gz structural.nii'
     >>> res = warp_2.run()  # doctest: +SKIP
 
@@ -2803,7 +2859,7 @@ class QwarpPlusMinus(CommandLine):
     >>> qwarp.inputs.source_file = 'sub-01_dir-LR_epi.nii.gz'
     >>> qwarp.inputs.nopadWARP = True
     >>> qwarp.inputs.base_file = 'sub-01_dir-RL_epi.nii.gz'
-    >>> qwarp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> qwarp.cmdline
     '3dQwarp -prefix Qwarp.nii.gz -plusminus -base sub-01_dir-RL_epi.nii.gz -nopadWARP -source sub-01_dir-LR_epi.nii.gz'
     >>> res = warp.run()  # doctest: +SKIP
 
@@ -2886,6 +2942,17 @@ class QwarpInputSpec(AFNICommandInputSpec):
              '* You CAN use -resample with these 3dQwarp options:'
              '-plusminus  -inilev  -iniwarp  -duplo',
         argstr='-resample')
+    allineate = traits.Bool(
+        desc='This option will make 3dQwarp run 3dAllineate first, to align '
+             'the source dataset to the base with an affine transformation. '
+             'It will then use that alignment as a starting point for the '
+             'nonlinear warping.',
+        argstr='-allineate')
+    allineate_opts = traits.Str(
+        desc='add extra options to the 3dAllineate command to be run by '
+             '3dQwarp.',
+        argstr='-allineate_opts %s',
+        xand=['allineate'])
     nowarp = traits.Bool(
         desc='Do not save the _WARP file.',
         argstr='-nowarp')
@@ -3089,7 +3156,7 @@ class QwarpInputSpec(AFNICommandInputSpec):
              'Note that the source dataset in the second run is the SAME as'
              'in the first run.  If you don\'t see why this is necessary,'
              'then you probably need to seek help from an AFNI guru.',
-        argstr='-inlev %d',
+        argstr='-inilev %d',
         xor=['duplo'])
     minpatch = traits.Int(
         desc='* The value of mm should be an odd integer.'
@@ -3364,7 +3431,7 @@ class Qwarp(AFNICommand):
     >>> qwarp.inputs.nopadWARP = True
     >>> qwarp.inputs.base_file = 'sub-01_dir-RL_epi.nii.gz'
     >>> qwarp.inputs.plusminus = True
-    >>> qwarp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> qwarp.cmdline
     '3dQwarp -base sub-01_dir-RL_epi.nii.gz -source sub-01_dir-LR_epi.nii.gz -nopadWARP -prefix sub-01_dir-LR_epi_QW -plusminus'
     >>> res = qwarp.run()  # doctest: +SKIP
 
@@ -3373,7 +3440,7 @@ class Qwarp(AFNICommand):
     >>> qwarp.inputs.in_file = 'structural.nii'
     >>> qwarp.inputs.base_file = 'mni.nii'
     >>> qwarp.inputs.resample = True
-    >>> qwarp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> qwarp.cmdline
     '3dQwarp -base mni.nii -source structural.nii -prefix structural_QW -resample'
     >>> res = qwarp.run()  # doctest: +SKIP
 
@@ -3387,7 +3454,7 @@ class Qwarp(AFNICommand):
     >>> qwarp.inputs.verb = True
     >>> qwarp.inputs.iwarp = True
     >>> qwarp.inputs.blur = [0,3]
-    >>> qwarp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> qwarp.cmdline
     '3dQwarp -base epi.nii -blur 0.0 3.0 -source structural.nii -iwarp -prefix anatSSQ.nii.gz -resample -verb -lpc'
     >>> res = qwarp.run()  # doctest: +SKIP
 
@@ -3397,7 +3464,7 @@ class Qwarp(AFNICommand):
     >>> qwarp.inputs.base_file = 'mni.nii'
     >>> qwarp.inputs.duplo = True
     >>> qwarp.inputs.blur = [0,3]
-    >>> qwarp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> qwarp.cmdline
     '3dQwarp -base mni.nii -blur 0.0 3.0 -duplo -source structural.nii -prefix structural_QW'
     >>> res = qwarp.run()  # doctest: +SKIP
 
@@ -3409,7 +3476,7 @@ class Qwarp(AFNICommand):
     >>> qwarp.inputs.minpatch = 25
     >>> qwarp.inputs.blur = [0,3]
     >>> qwarp.inputs.out_file = 'Q25'
-    >>> qwarp.cmdline  # doctest: +ALLOW_UNICODE
+    >>> qwarp.cmdline
     '3dQwarp -base mni.nii -blur 0.0 3.0 -duplo -source structural.nii -minpatch 25 -prefix Q25'
     >>> res = qwarp.run()  # doctest: +SKIP
     >>> qwarp2 = afni.Qwarp()
@@ -3419,13 +3486,26 @@ class Qwarp(AFNICommand):
     >>> qwarp2.inputs.out_file = 'Q11'
     >>> qwarp2.inputs.inilev = 7
     >>> qwarp2.inputs.iniwarp = ['Q25_warp+tlrc.HEAD']
-    >>> qwarp2.cmdline  # doctest: +ALLOW_UNICODE
-    '3dQwarp -base mni.nii -blur 0.0 2.0 -source structural.nii -inlev 7 -iniwarp Q25_warp+tlrc.HEAD -prefix Q11'
+    >>> qwarp2.cmdline
+    '3dQwarp -base mni.nii -blur 0.0 2.0 -source structural.nii -inilev 7 -iniwarp Q25_warp+tlrc.HEAD -prefix Q11'
     >>> res2 = qwarp2.run()  # doctest: +SKIP
-    """
+    >>> res2 = qwarp2.run()  # doctest: +SKIP
+    >>> qwarp3 = afni.Qwarp()
+    >>> qwarp3.inputs.in_file = 'structural.nii'
+    >>> qwarp3.inputs.base_file = 'mni.nii'
+    >>> qwarp3.inputs.allineate = True
+    >>> qwarp3.inputs.allineate_opts = '-cose lpa -verb'
+    >>> qwarp3.cmdline
+    "3dQwarp -allineate -allineate_opts '-cose lpa -verb' -base mni.nii -source structural.nii -prefix structural_QW"
+    >>> res3 = qwarp3.run()  # doctest: +SKIP    """
     _cmd = '3dQwarp'
     input_spec = QwarpInputSpec
     output_spec = QwarpOutputSpec
+
+    def _format_arg(self, name, spec, value):
+        if name == 'allineate_opts':
+            return spec.argstr % ("'" + value + "'")
+        return super(Qwarp, self)._format_arg(name, spec, value)
 
     def _list_outputs(self):
         outputs = self.output_spec().get()
@@ -3433,29 +3513,37 @@ class Qwarp(AFNICommand):
         if not isdefined(self.inputs.out_file):
             prefix = self._gen_fname(self.inputs.in_file, suffix='_QW')
             ext = '.HEAD'
+            suffix ='+tlrc'
         else:
             prefix = self.inputs.out_file
             ext_ind = max([prefix.lower().rfind('.nii.gz'),
                            prefix.lower().rfind('.nii.')])
             if ext_ind == -1:
                 ext = '.HEAD'
+                suffix = '+tlrc'
             else:
                 ext = prefix[ext_ind:]
-        print(ext,"ext")
-        outputs['warped_source'] = os.path.abspath(self._gen_fname(prefix, suffix='+tlrc')+ext)
+                suffix = ''
+        outputs['warped_source'] = fname_presuffix(prefix, suffix=suffix,
+                                                   use_ext=False) + ext
         if not self.inputs.nowarp:
-            outputs['source_warp'] = os.path.abspath(self._gen_fname(prefix, suffix='_WARP+tlrc')+ext)
+            outputs['source_warp'] = fname_presuffix(prefix,
+                suffix='_WARP' + suffix, use_ext=False) + ext
         if self.inputs.iwarp:
-            outputs['base_warp'] = os.path.abspath(self._gen_fname(prefix, suffix='_WARPINV+tlrc')+ext)
+            outputs['base_warp'] = fname_presuffix(prefix,
+                suffix='_WARPINV' + suffix, use_ext=False) + ext
         if isdefined(self.inputs.out_weight_file):
             outputs['weights'] = os.path.abspath(self.inputs.out_weight_file)
 
         if self.inputs.plusminus:
-            outputs['warped_source'] = os.path.abspath(self._gen_fname(prefix, suffix='_PLUS+tlrc')+ext)
-            outputs['warped_base'] = os.path.abspath(self._gen_fname(prefix, suffix='_MINUS+tlrc')+ext)
-            outputs['source_warp'] = os.path.abspath(self._gen_fname(prefix, suffix='_PLUS_WARP+tlrc')+ext)
-            outputs['base_warp'] = os.path.abspath(self._gen_fname(prefix, suffix='_MINUS_WARP+tlrc',)+ext)
-
+            outputs['warped_source'] = fname_presuffix(prefix,
+                suffix='_PLUS' + suffix, use_ext=False) + ext
+            outputs['warped_base'] = fname_presuffix(prefix,
+                suffix='_MINUS' + suffix, use_ext=False) + ext
+            outputs['source_warp'] = fname_presuffix(prefix,
+                suffix='_PLUS_WARP' + suffix, use_ext=False) + ext
+            outputs['base_warp'] = fname_presuffix(prefix,
+                suffix='_MINUS_WARP' + suffix, use_ext=False) + ext
         return outputs
 
     def _gen_filename(self, name):

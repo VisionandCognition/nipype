@@ -20,7 +20,8 @@ def test_DTIRecon_inputs():
     environ=dict(nohash=True,
     usedefault=True,
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     image_orientation_vectors=dict(argstr='-iop %f',
@@ -36,7 +37,8 @@ def test_DTIRecon_inputs():
     output_type=dict(argstr='-ot %s',
     usedefault=True,
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = DTIRecon.input_spec()

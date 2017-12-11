@@ -27,7 +27,8 @@ def test_Blur_inputs():
     ),
     gradient=dict(argstr='-gradient',
     ),
-    ignore_exception=dict(nohash=True,
+    ignore_exception=dict(deprecated='1.0.0',
+    nohash=True,
     usedefault=True,
     ),
     input_file=dict(argstr='%s',
@@ -48,7 +49,8 @@ def test_Blur_inputs():
     mandatory=True,
     xor=('fwhm', 'fwhm3d', 'standard_dev'),
     ),
-    terminal_output=dict(nohash=True,
+    terminal_output=dict(deprecated='1.0.0',
+    nohash=True,
     ),
     )
     inputs = Blur.input_spec()
